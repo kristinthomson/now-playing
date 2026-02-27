@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Now Playing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400&family=IBM+Plex+Sans:wght@300;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --accent: #e8ff00;
+    --text: #f0ede8;
+    --muted: #666;
+    --border: #222;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #setup-screen {
+    width: 100%;
+    max-width: 500px;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  #setup-screen h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  #setup-screen p {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .setup-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px;
+    border-radius: 2px;
+  }
+
+  .setup-step label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .setup-step input {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    padding: 10px 12px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .setup-step input:focus { border-color: var(--accent); }
+
+  button {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.1em;
+    padding: 14px 28px;
+    cursor: pointer;
+    border-radius: 2px;
+    width: 100%;
+    transition: opacity 0.2s;
+  }
+
+  button:hover { opacity: 0.85; }
+
+  .note {
+    background: #1a1500;
+    border: 1px solid #333;
+    padding: 14px;
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: #999;
+    line-height: 1.8;
+  }
+
+  .note a { color: var(--accent); text-decoration: none; }
+  .note code { color: var(--accent); }
+
+  #now-playing-screen {
+    display: none;
+    width: 100%;
+    height: 100vh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .header-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.35em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    opacity: 0.9;
+  }
+
+  .album-wrapper {
+    position: relative;
+    width: min(340px, 80vw);
+    aspect-ratio: 1;
+  }
+
+  #album-art {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.4s ease;
+    background: #1a1a1a;
+  }
+
+  .spin-indicator {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  .progress-bar-wrap {
+    width: min(340px, 80vw);
+    height: 2px;
+    background: #1a1a1a;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 1s linear;
+    opacity: 0.5;
+  }
+
+  .info-banner {
+    width: min(340px, 80vw);
+    background: #0f0f0f;
+    border: 1px solid #222;
+    border-top: 3px solid var(--accent);
+    padding: 20px 22px;
+    transition: opacity 0.4s ease;
+  }
+
+  .song-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    letter-spacing: 0.04em;
+    color: var(--text);
+    line-height: 1.05;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .artist-name {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 500;
+    font-size: clamp(0.85rem, 2vw, 1rem);
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .album-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 300;
+    font-size: clamp(0.72rem, 1.5vw, 0.82rem);
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #status-msg {
+    margin-top: 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    color: #333;
+    letter-spacing: 0.08em;
+  }
+
+  .fade-out { opacity: 0 !important; }
+
+  #error-msg {
+    display: none;
+    background: #1a0000;
+    border: 1px solid #440000;
+    color: #ff6666;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    padding: 12px 16px;
+    border-radius: 2px;
+    margin-top: 12px;
+    width: min(340px, 80vw);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div id="setup-screen">
+  <h1>Now<br>Playing</h1>
+  <p>Record store display — connect once to Spotify, then leave it running.</p>
+
+  <div class="note">
+    <strong style="color:#ccc;">Setup (3 steps):</strong><br><br>
+    1. Go to <a href="https://developer.spotify.com/dashboard" target="_blank">developer.spotify.com/dashboard</a> → Create App<br>
+    2. In the app's Settings → Redirect URIs, add this exact URL:<br>
+    <code id="redirect-hint" style="word-break:break-all;display:block;margin-top:6px;padding:6px;background:#111;border:1px solid #333;border-radius:2px;"></code><br>
+    3. Paste your Client ID below and click Connect.
+  </div>
+
+  <div class="setup-step">
+    <label>Spotify Client ID</label>
+    <input type="text" id="client-id-input" placeholder="e.g. a1b2c3d4e5f6..." autocomplete="off" />
+  </div>
+
+  <button onclick="startAuth()">Connect to Spotify →</button>
+</div>
+
+<div id="now-playing-screen">
+  <div class="header-label">▶ Now Playing</div>
+  <div class="album-wrapper">
+    <img id="album-art" src="" alt="Album Art" />
+    <div class="spin-indicator"></div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+  <div class="info-banner" id="info-banner">
+    <div class="artist-name" id="track-artist">—</div>
+    <div class="song-title" id="track-song">Waiting for track...</div>
+    <div class="album-name" id="track-album">—</div>
+  </div>
+  <div id="status-msg">Connecting...</div>
+  <div id="error-msg"></div>
+</div>
+
+<script>
+  const SCOPES = 'user-read-playback-state user-read-currently-playing';
+  const pageUrl = window.location.href.split('?')[0].split('#')[0];
+
+  document.getElementById('redirect-hint').textContent = pageUrl;
+
+  const savedClientId = localStorage.getItem('sp_client_id');
+  if (savedClientId) document.getElementById('client-id-input').value = savedClientId;
+
+  // PKCE helpers
+  function generateRandomString(length) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const arr = new Uint8Array(length);
+    crypto.getRandomValues(arr);
+    return Array.from(arr).map(b => chars[b % chars.length]).join('');
+  }
+
+  async function sha256(plain) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(plain));
+  }
+
+  function base64urlencode(buffer) {
+    return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  async function startAuth() {
+    const clientId = document.getElementById('client-id-input').value.trim();
+    if (!clientId) { alert('Please enter your Spotify Client ID.'); return; }
+    localStorage.setItem('sp_client_id', clientId);
+
+    const codeVerifier = generateRandomString(64);
+    const codeChallenge = base64urlencode(await sha256(codeVerifier));
+    localStorage.setItem('sp_code_verifier', codeVerifier);
+
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: clientId,
+      scope: SCOPES,
+      redirect_uri: pageUrl,
+      code_challenge_method: 'S256',
+      code_challenge: codeChallenge,
+    });
+
+    window.location.href = 'https://accounts.spotify.com/authorize?' + params.toString();
+  }
+
+  async function exchangeCodeForToken(code) {
+    const clientId = localStorage.getItem('sp_client_id');
+    const codeVerifier = localStorage.getItem('sp_code_verifier');
+
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: pageUrl,
+        client_id: clientId,
+        code_verifier: codeVerifier,
+      })
+    });
+
+    const data = await res.json();
+    if (data.access_token) {
+      localStorage.setItem('sp_access_token', data.access_token);
+      localStorage.setItem('sp_refresh_token', data.refresh_token);
+      localStorage.setItem('sp_token_expiry', Date.now() + data.expires_in * 1000);
+      return data.access_token;
+    }
+    throw new Error(data.error_description || 'Token exchange failed');
+  }
+
+  async function refreshAccessToken() {
+    const clientId = localStorage.getItem('sp_client_id');
+    const refreshToken = localStorage.getItem('sp_refresh_token');
+    if (!refreshToken) throw new Error('No refresh token');
+
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        client_id: clientId,
+      })
+    });
+
+    const data = await res.json();
+    if (data.access_token) {
+      localStorage.setItem('sp_access_token', data.access_token);
+      localStorage.setItem('sp_token_expiry', Date.now() + data.expires_in * 1000);
+      if (data.refresh_token) localStorage.setItem('sp_refresh_token', data.refresh_token);
+      return data.access_token;
+    }
+    throw new Error('Token refresh failed');
+  }
+
+  async function getValidToken() {
+    const expiry = parseInt(localStorage.getItem('sp_token_expiry') || '0');
+    if (Date.now() < expiry - 60000) return localStorage.getItem('sp_access_token');
+    return await refreshAccessToken();
+  }
+
+  let currentTrackId = null;
+
+  async function fetchCurrentTrack() {
+    let token;
+    try {
+      token = await getValidToken();
+    } catch (e) {
+      document.getElementById('setup-screen').style.display = 'flex';
+      document.getElementById('now-playing-screen').style.display = 'none';
+      return;
+    }
+
+    try {
+      const res = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.status === 204) { updateIdle('Nothing playing right now'); return; }
+      if (res.status === 401) { localStorage.removeItem('sp_access_token'); fetchCurrentTrack(); return; }
+      if (!res.ok) { showError(`Spotify error: ${res.status}`); return; }
+
+      const data = await res.json();
+      if (!data || !data.item) { updateIdle('Nothing playing right now'); return; }
+
+      hideError();
+      const track = data.item;
+      const artist = track.artists.map(a => a.name).join(', ');
+      const song = track.name;
+      const album = track.album.name;
+      const artUrl = track.album.images[0]?.url || '';
+      const progress = (data.progress_ms / track.duration_ms) * 100;
+
+      document.getElementById('progress-bar').style.width = progress + '%';
+
+      if (track.id !== currentTrackId) {
+        currentTrackId = track.id;
+        const art = document.getElementById('album-art');
+        const banner = document.getElementById('info-banner');
+        art.classList.add('fade-out');
+        banner.classList.add('fade-out');
+        setTimeout(() => {
+          document.getElementById('track-artist').textContent = artist;
+          document.getElementById('track-song').textContent = song;
+          document.getElementById('track-album').textContent = album;
+          if (artUrl) art.src = artUrl;
+          art.classList.remove('fade-out');
+          banner.classList.remove('fade-out');
+        }, 400);
+      }
+
+      document.getElementById('status-msg').textContent =
+        `Last updated ${new Date().toLocaleTimeString()}`;
+
+    } catch (e) {
+      showError('Network error — retrying...');
+    }
+  }
+
+  function updateIdle(msg) {
+    document.getElementById('track-song').textContent = msg;
+    document.getElementById('track-artist').textContent = '—';
+    document.getElementById('track-album').textContent = '—';
+    document.getElementById('status-msg').textContent =
+      `Last checked ${new Date().toLocaleTimeString()}`;
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function hideError() {
+    document.getElementById('error-msg').style.display = 'none';
+  }
+
+  function showNowPlaying() {
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('now-playing-screen').style.display = 'flex';
+    fetchCurrentTrack();
+    setInterval(fetchCurrentTrack, 5000);
+  }
+
+  // Boot
+  (async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const error = urlParams.get('error');
+
+    if (error) {
+      alert('Spotify authorization denied: ' + error);
+      history.replaceState(null, '', pageUrl);
+      return;
+    }
+
+    if (code) {
+      history.replaceState(null, '', pageUrl);
+      try {
+        await exchangeCodeForToken(code);
+        showNowPlaying();
+      } catch (e) {
+        alert('Could not get access token: ' + e.message);
+      }
+      return;
+    }
+
+    // Already authenticated?
+    if (localStorage.getItem('sp_refresh_token')) {
+      try {
+        await refreshAccessToken();
+        showNowPlaying();
+        return;
+      } catch (e) { /* fall through to setup */ }
+    }
+
+    document.getElementById('setup-screen').style.display = 'flex';
+  })();
+</script>
+</body>
+</html>
