@@ -31,7 +31,7 @@
   .note { background:#1a1500; border:1px solid #333; padding:14px; border-radius:2px; font-family:'IBM Plex Mono',monospace; font-size:.72rem; color:#999; line-height:1.8; }
   .note a { color:var(--accent); text-decoration:none; }
   .note code { color:var(--accent); word-break:break-all; display:block; margin-top:6px; padding:6px; background:#111; border:1px solid #333; border-radius:2px; }
-  #now-playing-screen { display:none; width:100%; height:100vh; height:100dvh; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px 24px; }
+  #now-playing-screen { display:none; width:100%; height:100vh; height:100dvh; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px 24px; position:relative; }
   .header-label { font-family:'Bebas Neue',sans-serif; font-size:clamp(2.2rem,6vw,3.8rem); letter-spacing:.25em; color:var(--accent); text-transform:uppercase; margin-bottom:24px; display:flex; align-items:center; gap:16px; }
   .header-label .dot { width:16px; height:16px; border-radius:50%; background:var(--accent); animation:pulse 2s infinite; flex-shrink:0; }
   @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.6)} }
@@ -56,6 +56,27 @@
   #status-msg  { margin-top:14px; font-family:'IBM Plex Mono',monospace; font-size:.68rem; color:#2a2a2a; letter-spacing:.08em; }
   .fade-out { opacity:0 !important; }
   #error-msg { display:none; background:#1a0000; border:1px solid #440000; color:#ff6666; font-family:'IBM Plex Mono',monospace; font-size:.75rem; padding:12px 16px; border-radius:2px; margin-top:12px; width:min(380px,74vw); text-align:center; }
+
+  /* Disconnect button */
+  #disconnect-btn {
+    position:absolute;
+    bottom:18px;
+    right:20px;
+    background:none;
+    border:none;
+    color:#222;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:.62rem;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    cursor:pointer;
+    padding:6px 8px;
+    width:auto;
+    transition:color .3s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #disconnect-btn:hover { color:#555; opacity:1; }
+  #disconnect-btn:active { color:var(--accent); }
 </style>
 </head>
 <body>
@@ -93,6 +114,7 @@
   </div>
   <div id="status-msg">Connecting...</div>
   <div id="error-msg"></div>
+  <button id="disconnect-btn" onclick="disconnect()">⏏ switch account</button>
 </div>
 
 <script>
@@ -168,6 +190,16 @@
   async function getToken() {
     if (Date.now() < parseInt(localStorage.getItem('sp_token_expiry')||0)-60000) return localStorage.getItem('sp_access_token');
     await doRefresh(); return localStorage.getItem('sp_access_token');
+  }
+
+  function disconnect() {
+    localStorage.removeItem('sp_access_token');
+    localStorage.removeItem('sp_refresh_token');
+    localStorage.removeItem('sp_token_expiry');
+    localStorage.removeItem('sp_code_verifier');
+    // keep sp_client_id so they don't have to re-enter it
+    document.getElementById('now-playing-screen').style.display='none';
+    document.getElementById('setup-screen').style.display='flex';
   }
 
   let curId = null;
