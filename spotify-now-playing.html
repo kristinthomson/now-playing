@@ -156,7 +156,8 @@
     localStorage.setItem('sp_code_verifier', v);
     window.location.href = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
       response_type:'code', client_id:id, scope:SCOPES,
-      redirect_uri:pageUrl, code_challenge_method:'S256', code_challenge:ch
+      redirect_uri:pageUrl, code_challenge_method:'S256', code_challenge:ch,
+      show_dialog:'true'
     });
   }
 
